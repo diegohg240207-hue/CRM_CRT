@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -33,6 +34,14 @@ import { AuditModule } from './audit/audit.module';
     CobranzaModule,
     ReportesModule,
     AuditModule,
+  ],
+  providers: [
+    // Apply rate limiting globally to ALL endpoints
+    // Auth endpoints get stricter limits via @Throttle() decorator on their routes
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
