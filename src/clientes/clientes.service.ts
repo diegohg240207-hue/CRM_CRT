@@ -1,0 +1,123 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateClienteDto, UpdateClienteDto, AumentarLineaDto } from './dto/cliente.dto';
+import { AuditService } from '../audit/audit.service';
+
+@Injectable()
+export class ClientesService {
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
+
+  private generateFolio() {
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    return `C-${num.toString().padStart(4, '0')}`;
+  }
+
+  async findAll(filters: { sucursalId?: string; estatus?: string; riesgo?: string; page?: number; limit?: number } = {}) {
+    const { sucursalId, estatus, riesgo, page = 1, limit = 20 } = filters;
+    const skip = (page - 1) * limit;
+    const where: any = {};
+    if (sucursalId) where.sucursalId = sucursalId;
+    if (estatus) where.estatus = estatus;
+    if (riesgo) where.riesgo = riesgo;
+
+    const [data, total] = await Promise.all([
+      this.prisma.cliente.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          sucursal: { select: { id: true, nombre: true } },
+          lineaCredito: true,
+        },
+        orderBy: { nombre: 'asc' },
+      }),
+      this.prisma.cliente.count({ where }),
+    ]);
+    return { data, total, page, limit };
+  }
+
+  async findOne(id: string) {
+    const c = await this.prisma.cliente.findUnique({
+      where: { id },
+      include: {
+        sucursal: true,
+        lineaCredito: { include: { historial: { take: 10, orderBy: { fecha: 'desc' } } } },
+        creditos: { take: 5, orderBy: { createdAt: 'desc' } },
+        cobranza: { take: 3, orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!c) throw new NotFoundException('Cliente no encontrado');
+    return c;
+  }
+
+  async create(dto: CreateClienteDto, usuarioId: string) {
+    const { lineaCredito: lineaAprobada, ...clienteData } = dto;
+    const cliente = await this.prisma.cliente.create({
+      data: {
+        folio: this.generateFolio(),
+        ...clienteData as any,
+        scoreInterno: this.calcularScoreInterno(dto.scoreBuro),
+        riesgo: this.determinarRiesgo(dto.scoreBuro),
+        lineaCredito: {
+          create: {
+            lineaAprobada,
+            lineaUsada: 0,
+            lineaDisponible: lineaAprobada,
+          },
+        },
+      },
+      include: { lineaCredito: true, sucursal: { select: { nombre: true } } },
+    });
+    await this.audit.log({ accion: 'CREATE', entidad: 'Cliente', entidadId: cliente.id, usuarioId });
+    return cliente;
+  }
+
+  async update(id: string, dto: UpdateClienteDto, usuarioId: string) {
+    await this.findOne(id);
+    const updated = await this.prisma.cliente.update({ where: { id }, data: dto as any });
+    await this.audit.log({ accion: 'UPDATE', entidad: 'Cliente', entidadId: id, usuarioId, datos: dto });
+    return updated;
+  }
+
+  async aumentarLinea(id: string, dto: AumentarLineaDto, usuarioId: string) {
+    const cliente = await this.findOne(id);
+    const lineaActual = (cliente as any).lineaCredito;
+    if (!lineaActual) throw new NotFoundException('Línea de crédito no encontrada');
+
+    await this.prisma.historialLinea.create({
+      data: {
+        lineaCreditoId: lineaActual.id,
+        montoAnterior: lineaActual.lineaAprobada,
+        montoNuevo: dto.montoNuevo,
+        motivo: dto.motivo,
+      },
+    });
+
+    const updated = await this.prisma.lineaCredito.update({
+      where: { id: lineaActual.id },
+      data: {
+        lineaAprobada: dto.montoNuevo,
+        lineaDisponible: dto.montoNuevo - lineaActual.lineaUsada,
+        ultimoAumento: new Date(),
+        elegibleAumento: false,
+      },
+    });
+
+    await this.audit.log({ accion: 'AUMENTAR_LINEA', entidad: 'Cliente', entidadId: id, usuarioId, datos: dto });
+    return updated;
+  }
+
+  private calcularScoreInterno(scoreBuro: number): number {
+    if (scoreBuro >= 750) return 85;
+    if (scoreBuro >= 700) return 70;
+    if (scoreBuro >= 600) return 55;
+    if (scoreBuro >= 500) return 40;
+    return 20;
+  }
+
+  private determinarRiesgo(scoreBuro: number): string {
+    if (scoreBuro >= 700) return 'BAJO';
+    if (scoreBuro >= 550) return 'MEDIO';
+    return 'ALTO';
+  }
+}

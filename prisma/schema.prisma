@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== SUCURSALES ====================
+model Sucursal {
+  id         String   @id @default(uuid())
+  nombre     String
+  region     String
+  direccion  String?
+  telefono   String?
+  activa     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  usuarios   Usuario[]
+  prospectos Prospecto[]
+  clientes   Cliente[]
+
+  @@map("sucursales")
+}
+
+// ==================== USUARIOS ====================
+model Usuario {
+  id           String   @id @default(uuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  rol          RolUsuario
+  sucursalId   String?  @map("sucursal_id")
+  activo       Boolean  @default(true)
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sucursal     Sucursal? @relation(fields: [sucursalId], references: [id])
+  sessions     Session[]
+  prospectos   Prospecto[] @relation("EjecutivoProspecto")
+  creditos     Credito[]   @relation("EjecutivoCredito")
+  cobranza     Cobranza[]  @relation("EjecutivoCobranza")
+  auditLogs    AuditLog[]
+
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  ADMINISTRADOR
+  SUPERVISOR
+  EJECUTIVO_CRM
+  CREDITO
+  COBRANZA
+
+  @@map("rol_usuario")
+}
+
+// ==================== SESSIONS ====================
+model Session {
+  id           String   @id @default(uuid())
+  usuarioId    String   @map("usuario_id")
+  refreshToken String   @unique @map("refresh_token")
+  expiresAt    DateTime @map("expires_at")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ==================== PROSPECTOS ====================
+model Prospecto {
+  id          String   @id @default(uuid())
+  folio       String   @unique
+  nombre      String
+  telefono    String
+  email       String?
+  sucursalId  String   @map("sucursal_id")
+  producto    String
+  montoEstimado Decimal @map("monto_estimado") @db.Decimal(12, 2)
+  score       Int      @default(0)
+  prioridad   Prioridad @default(MEDIA)
+  etapa       EtapaProspecto @default(NO_CONTACTADO)
+  ejecutivoId String   @map("ejecutivo_id")
+  fuente      String?
+  etiquetas   String[] @default([])
+  notas       String?
+  diasEnEtapa Int      @default(0) @map("dias_en_etapa")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  sucursal    Sucursal  @relation(fields: [sucursalId], references: [id])
+  ejecutivo   Usuario   @relation("EjecutivoProspecto", fields: [ejecutivoId], references: [id])
+  interacciones InteraccionProspecto[]
+
+  @@map("prospectos")
+}
+
+enum Prioridad {
+  ALTA
+  MEDIA
+  BAJA
+
+  @@map("prioridad")
+}
+
+enum EtapaProspecto {
+  NO_CONTACTADO
+  CONTACTADO
+  SEGUIMIENTO
+  CIERRE
+  DECLINADO
+
+  @@map("etapa_prospecto")
+}
+
+model InteraccionProspecto {
+  id           String   @id @default(uuid())
+  prospectoId  String   @map("prospecto_id")
+  tipo         String
+  descripcion  String
+  resultado    String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  prospecto    Prospecto @relation(fields: [prospectoId], references: [id], onDelete: Cascade)
+
+  @@map("interacciones_prospecto")
+}
+
+// ==================== CLIENTES ====================
+model Cliente {
+  id               String   @id @default(uuid())
+  folio            String   @unique
+  nombre           String
+  telefono         String
+  email            String?
+  sucursalId       String   @map("sucursal_id")
+  fechaVinculacion DateTime @default(now()) @map("fecha_vinculacion")
+  activo           Boolean  @default(true)
+
+  // Información financiera
+  vivienda         TipoVivienda @default(RENTADA)
+  salarioMensual   Decimal      @map("salario_mensual") @db.Decimal(12, 2)
+  antiguedadLaboral Int         @default(0) @map("antiguedad_laboral")
+  scoreBuro        Int          @default(0) @map("score_buro")
+  scoreInterno     Int          @default(0) @map("score_interno")
+  riesgo           NivelRiesgo  @default(MEDIO)
+  estatus          EstatusCliente @default(AL_CORRIENTE)
+
+  totalCompras     Int      @default(0) @map("total_compras")
+  ultimaCompra     DateTime? @map("ultima_compra")
+  proximoPago      DateTime? @map("proximo_pago")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  sucursal         Sucursal     @relation(fields: [sucursalId], references: [id])
+  lineaCredito     LineaCredito?
+  creditos         Credito[]
+  cobranza         Cobranza[]
+
+  @@map("clientes")
+}
+
+enum TipoVivienda {
+  PROPIA
+  FAMILIAR
+  RENTADA
+
+  @@map("tipo_vivienda")
+}
+
+enum NivelRiesgo {
+  BAJO
+  MEDIO
+  ALTO
+
+  @@map("nivel_riesgo")
+}
+
+enum EstatusCliente {
+  AL_CORRIENTE
+  MORA_TEMPRANA
+  VENCIDO
+
+  @@map("estatus_cliente")
+}
+
+// ==================== LÍNEAS DE CRÉDITO ====================
+model LineaCredito {
+  id              String   @id @default(uuid())
+  clienteId       String   @unique @map("cliente_id")
+  lineaAprobada   Decimal  @map("linea_aprobada") @db.Decimal(12, 2)
+  lineaUsada      Decimal  @default(0) @map("linea_usada") @db.Decimal(12, 2)
+  lineaDisponible Decimal  @map("linea_disponible") @db.Decimal(12, 2)
+  ultimoAumento   DateTime? @map("ultimo_aumento")
+  proxRevision    DateTime? @map("prox_revision")
+  elegibleAumento Boolean  @default(false) @map("elegible_aumento")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  cliente         Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  historial       HistorialLinea[]
+
+  @@map("lineas_credito")
+}
+
+model HistorialLinea {
+  id            String   @id @default(uuid())
+  lineaCreditoId String  @map("linea_credito_id")
+  montoAnterior Decimal  @map("monto_anterior") @db.Decimal(12, 2)
+  montoNuevo    Decimal  @map("monto_nuevo") @db.Decimal(12, 2)
+  motivo        String?
+  fecha         DateTime @default(now())
+
+  lineaCredito  LineaCredito @relation(fields: [lineaCreditoId], references: [id], onDelete: Cascade)
+
+  @@map("historial_lineas")
+}
+
+// ==================== CRÉDITOS ====================
+model Credito {
+  id          String   @id @default(uuid())
+  folio       String   @unique
+  clienteId   String   @map("cliente_id")
+  ejecutivoId String   @map("ejecutivo_id")
+  monto       Decimal  @db.Decimal(12, 2)
+  plazoMeses  Int      @map("plazo_meses")
+  mensualidad Decimal  @db.Decimal(12, 2)
+  tasaInteres Decimal  @default(0) @map("tasa_interes") @db.Decimal(5, 2)
+  scoreFinal  Int      @map("score_final")
+  riesgo      NivelRiesgo
+  estatus     EstatusCredito @default(EN_REVISION)
+  requiereAval Boolean @default(false) @map("requiere_aval")
+  motivoRechazo String? @map("motivo_rechazo")
+  fechaAprobacion DateTime? @map("fecha_aprobacion")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  ejecutivo   Usuario  @relation("EjecutivoCredito", fields: [ejecutivoId], references: [id])
+  evaluacion  EvaluacionScoring?
+  cobranza    Cobranza[]
+  pagos       Pago[]
+
+  @@map("creditos")
+}
+
+enum EstatusCredito {
+  EN_REVISION
+  APROBADO
+  RECHAZADO
+  REQUIERE_AVAL
+  ACTIVO
+  LIQUIDADO
+
+  @@map("estatus_credito")
+}
+
+// ==================== SCORING ====================
+model EvaluacionScoring {
+  id              String   @id @default(uuid())
+  creditoId       String   @unique @map("credito_id")
+  scoreBuro       Int      @map("score_buro")
+  ptsBuro         Int      @map("pts_buro")
+  vivienda        TipoVivienda
+  ptsVivienda     Int      @map("pts_vivienda")
+  salario         Decimal  @db.Decimal(12, 2)
+  ptsSalario      Int      @map("pts_salario")
+  capacidadPago   Decimal  @map("capacidad_pago") @db.Decimal(5, 2)
+  ptsCapacidad    Int      @map("pts_capacidad")
+  antiguedadLaboral Int    @map("antiguedad_laboral")
+  ptsAntiguedad   Int      @map("pts_antiguedad")
+  subtotal        Int
+  scoreFinal      Int      @map("score_final")
+  decision        DecisionCredito
+  lineaAprobada   Decimal? @map("linea_aprobada") @db.Decimal(12, 2)
+  probabilidad    Decimal  @db.Decimal(5, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  credito         Credito  @relation(fields: [creditoId], references: [id], onDelete: Cascade)
+
+  @@map("evaluaciones_scoring")
+}
+
+enum DecisionCredito {
+  APROBADO
+  REQUIERE_AVAL
+  RECHAZADO
+
+  @@map("decision_credito")
+}
+
+// ==================== COBRANZA ====================
+model Cobranza {
+  id             String   @id @default(uuid())
+  creditoId      String   @map("credito_id")
+  clienteId      String   @map("cliente_id")
+  ejecutivoId    String   @map("ejecutivo_id")
+  montoAdeudado  Decimal  @map("monto_adeudado") @db.Decimal(12, 2)
+  diasVencido    Int      @default(0) @map("dias_vencido")
+  fechaProxPago  DateTime? @map("fecha_prox_pago")
+  riesgo         NivelRiesgo @default(BAJO)
+  ultimaAccion   String?  @map("ultima_accion")
+  fechaUltAccion DateTime? @map("fecha_ult_accion")
+  estatus        EstatusCobranza @default(PENDIENTE)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  credito        Credito  @relation(fields: [creditoId], references: [id])
+  cliente        Cliente  @relation(fields: [clienteId], references: [id])
+  ejecutivo      Usuario  @relation("EjecutivoCobranza", fields: [ejecutivoId], references: [id])
+  acciones       AccionCobranza[]
+
+  @@map("cobranza")
+}
+
+enum EstatusCobranza {
+  PENDIENTE
+  EN_GESTION
+  PAGADO
+  ACUERDO
+  JURIDICO
+
+  @@map("estatus_cobranza")
+}
+
+model AccionCobranza {
+  id          String   @id @default(uuid())
+  cobranzaId  String   @map("cobranza_id")
+  tipo        TipoAccion
+  descripcion String?
+  resultado   String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  cobranza    Cobranza @relation(fields: [cobranzaId], references: [id], onDelete: Cascade)
+
+  @@map("acciones_cobranza")
+}
+
+enum TipoAccion {
+  LLAMADA
+  WHATSAPP
+  EMAIL
+  VISITA
+  ACUERDO_PAGO
+  PROMESA_PAGO
+
+  @@map("tipo_accion")
+}
+
+// ==================== PAGOS ====================
+model Pago {
+  id          String   @id @default(uuid())
+  creditoId   String   @map("credito_id")
+  monto       Decimal  @db.Decimal(12, 2)
+  fechaPago   DateTime @map("fecha_pago")
+  tipo        TipoPago @default(MENSUALIDAD)
+  referencia  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  credito     Credito  @relation(fields: [creditoId], references: [id])
+
+  @@map("pagos")
+}
+
+enum TipoPago {
+  MENSUALIDAD
+  ABONO
+  LIQUIDACION
+
+  @@map("tipo_pago")
+}
+
+// ==================== AUDIT LOGS ====================
+model AuditLog {
+  id          String   @id @default(uuid())
+  usuarioId   String?  @map("usuario_id")
+  accion      String
+  entidad     String
+  entidadId   String?  @map("entidad_id")
+  datos       Json?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
