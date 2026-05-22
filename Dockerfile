@@ -7,5 +7,7 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 RUN ls dist/main.js && echo "dist/main.js OK"
+COPY start.sh ./start.sh
+RUN chmod +x start.sh
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["./start.sh"]
