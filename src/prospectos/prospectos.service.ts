@@ -79,7 +79,7 @@ export class ProspectosService {
         folio: this.generateFolio(),
         ...dto,
         score: this.calcularScoreComercial(),
-      },
+      } as any,
       include: {
         sucursal: { select: { nombre: true } },
         ejecutivo: { select: { nombre: true } },
