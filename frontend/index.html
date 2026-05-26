@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRM Casa Ruiz · Plataforma Financiera</title>
+<link rel="icon" href="assets/icono.png"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Backend URL: auto-detección dev vs prod -->
+<script>
+  // DEV: localhost → Railway (CORS configurado para localhost:5500)
+  // PROD: Vercel → Railway
+  const _isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  window.CRM_API_URL = _isLocal
+    ? 'https://crmcrt-production.up.railway.app/api/v1'  // dev usa backend prod (CORS permitido)
+    : 'https://crmcrt-production.up.railway.app/api/v1'; // prod igual
+  window.CRM_DEV_MODE = _isLocal;
+  window.CRM_BUILD = 'CRM_CRT_DEPLOY_CHECK_20260526_1200';
+  console.info('[CRM] Build:', window.CRM_BUILD, '| API:', window.CRM_API_URL);
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<!-- CRM API Client — conecta con backend NestJS -->
+<script src="api.js"></script>
+
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="login_dashboard.jsx"></script>
+<script type="text/babel" src="prospectos.jsx"></script>
+<script type="text/babel" src="creditos_scoring.jsx"></script>
+<script type="text/babel" src="clientes_lineas.jsx"></script>
+<script type="text/babel" src="modules.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
