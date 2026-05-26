@@ -8,9 +8,12 @@ import { v4 as uuidv4 } from 'uuid';
 export class ProspectosService {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
 
-  private generateFolio() {
-    const num = Math.floor(Math.random() * 9000) + 1000;
-    return `P-${num}`;
+  /** Folio único garantizado: P-YYYYMMDD-XXXXXX (6 hex chars de UUID v4 = ~16.7M combinaciones/día) */
+  private generateFolio(): string {
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const unique = uuidv4().replace(/-/g, '').slice(0, 6).toUpperCase();
+    return `P-${ymd}-${unique}`;
   }
 
   async findAll(filters: {
@@ -120,7 +123,8 @@ export class ProspectosService {
     });
   }
 
-  private calcularScoreComercial() {
+  // TODO: Reemplazar con scoring real basado en datos del prospecto (historial, perfil, producto)
+  private calcularScoreComercial(): number {
     return Math.floor(Math.random() * 40) + 50;
   }
 }

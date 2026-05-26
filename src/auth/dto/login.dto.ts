@@ -11,12 +11,13 @@ export class LoginDto {
   @MinLength(6)
   password: string;
 
-  @ApiProperty({ example: 'sucursal-monterrey', required: false })
+  @ApiProperty({ example: 'sucursal-tamazula', required: false })
   @IsOptional()
   @IsString()
   sucursalId?: string;
 }
 
+// Used internally by AuthService — refresh token is extracted from httpOnly cookie by the controller
 export class RefreshTokenDto {
   @ApiProperty()
   @IsString()

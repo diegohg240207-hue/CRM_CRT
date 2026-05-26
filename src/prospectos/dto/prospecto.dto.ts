@@ -1,5 +1,7 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsArray, IsEmail } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsArray, IsEmail, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+const TIPO_INTERACCION = ['LLAMADA', 'WHATSAPP', 'EMAIL', 'VISITA', 'REUNION', 'NOTA', 'CAMBIO_ETAPA'] as const;
 
 export class CreateProspectoDto {
   @ApiProperty() @IsString() nombre: string;
@@ -31,4 +33,19 @@ export class MoverEtapaDto {
   @ApiProperty({ enum: ['NO_CONTACTADO', 'CONTACTADO', 'SEGUIMIENTO', 'CIERRE', 'DECLINADO'] })
   @IsEnum(['NO_CONTACTADO', 'CONTACTADO', 'SEGUIMIENTO', 'CIERRE', 'DECLINADO'])
   etapa: string;
+}
+
+export class CreateInteraccionDto {
+  @ApiProperty({ enum: TIPO_INTERACCION, example: 'LLAMADA' })
+  @IsIn(TIPO_INTERACCION, { message: `tipo debe ser uno de: ${TIPO_INTERACCION.join(', ')}` })
+  tipo: typeof TIPO_INTERACCION[number];
+
+  @ApiProperty({ example: 'Se contactó al cliente para presentar el producto.' })
+  @IsString()
+  descripcion: string;
+
+  @ApiProperty({ required: false, example: 'Interesado — agendó cita para el viernes' })
+  @IsOptional()
+  @IsString()
+  resultado?: string;
 }

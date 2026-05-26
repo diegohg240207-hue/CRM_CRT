@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { ProspectosService } from './prospectos.service';
-import { CreateProspectoDto, UpdateProspectoDto, MoverEtapaDto } from './dto/prospecto.dto';
+import { CreateProspectoDto, UpdateProspectoDto, MoverEtapaDto, CreateInteraccionDto } from './dto/prospecto.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -58,7 +58,7 @@ export class ProspectosController {
 
   @Post(':id/interacciones')
   @ApiOperation({ summary: 'Registrar interacción con prospecto' })
-  addInteraccion(@Param('id') id: string, @Body() body: any) {
-    return this.svc.addInteraccion(id, body);
+  addInteraccion(@Param('id') id: string, @Body() dto: CreateInteraccionDto) {
+    return this.svc.addInteraccion(id, dto);
   }
 }

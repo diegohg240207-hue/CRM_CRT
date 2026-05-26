@@ -144,12 +144,99 @@ async function main() {
   }
 
   console.log(`Prospectos demo creados: ${prospectosData.length}`);
+
+  // ── Créditos demo ──────────────────────────────────────────────────────
+  // Obtener clientes creados para asociar créditos
+  const clientesCreados = await prisma.cliente.findMany({ where: { folio: { in: clientesData.map(c => c.folio) } } });
+  const creditosData = [
+    { folio: 'CR-3318', clienteIdx: 0, monto: 22400, plazo: 12, tasa: 18, score: 820, decision: 'APROBADO', riesgo: 'BAJO' },
+    { folio: 'CR-3317', clienteIdx: 1, monto:  8400, plazo: 18, tasa: 24, score: 580, decision: 'REQUIERE_AVAL', riesgo: 'ALTO' },
+    { folio: 'CR-3316', clienteIdx: 2, monto: 24500, plazo: 12, tasa: 18, score: 745, decision: 'APROBADO', riesgo: 'BAJO' },
+    { folio: 'CR-3315', clienteIdx: 3, monto: 31200, plazo: 18, tasa: 18, score: 855, decision: 'APROBADO', riesgo: 'BAJO' },
+    { folio: 'CR-3313', clienteIdx: 0, monto: 16800, plazo: 18, tasa: 24, score: 560, decision: 'RECHAZADO', riesgo: 'ALTO' },
+  ];
+
+  const creditosCreados: any[] = [];
+  for (const cr of creditosData) {
+    const cliente = clientesCreados[cr.clienteIdx];
+    if (!cliente) continue;
+    const tasaMensual = cr.tasa / 100 / 12;
+    const mensualidad = (cr.monto * tasaMensual * Math.pow(1 + tasaMensual, cr.plazo)) / (Math.pow(1 + tasaMensual, cr.plazo) - 1);
+    const estatus = cr.decision === 'APROBADO' ? 'APROBADO' : cr.decision === 'REQUIERE_AVAL' ? 'REQUIERE_AVAL' : 'RECHAZADO';
+    const credito = await prisma.credito.upsert({
+      where: { folio: cr.folio },
+      update: {},
+      create: {
+        folio: cr.folio,
+        clienteId: cliente.id,
+        ejecutivoId: ejecutivoCred.id,
+        monto: cr.monto,
+        plazoMeses: cr.plazo,
+        mensualidad: Math.round(mensualidad * 100) / 100,
+        tasaInteres: cr.tasa,
+        scoreFinal: cr.score,
+        riesgo: cr.riesgo as any,
+        estatus: estatus as any,
+        requiereAval: cr.decision === 'REQUIERE_AVAL',
+        fechaAprobacion: estatus === 'APROBADO' ? new Date() : null,
+        evaluacion: {
+          create: {
+            scoreBuro: cliente.scoreBuro,
+            ptsBuro: cr.score >= 750 ? 50 : cr.score >= 700 ? 40 : cr.score >= 600 ? 30 : 20,
+            vivienda: cliente.vivienda,
+            ptsVivienda: cliente.vivienda === 'PROPIA' ? 30 : cliente.vivienda === 'FAMILIAR' ? 22 : 15,
+            salario: Number(cliente.salarioMensual),
+            ptsSalario: Number(cliente.salarioMensual) >= 20000 ? 10 : Number(cliente.salarioMensual) >= 15000 ? 6 : 4,
+            capacidadPago: 0.20,
+            ptsCapacidad: 3,
+            antiguedadLaboral: cliente.antiguedadLaboral,
+            ptsAntiguedad: cliente.antiguedadLaboral >= 5 ? 5 : cliente.antiguedadLaboral >= 3 ? 3 : 2,
+            subtotal: Math.round(cr.score / 10),
+            scoreFinal: cr.score,
+            decision: cr.decision as any,
+            lineaAprobada: cr.decision === 'APROBADO' ? 45000 : cr.decision === 'REQUIERE_AVAL' ? 15000 : null,
+            probabilidad: Math.min(98, Math.round((cr.score / 1000) * 100)),
+          },
+        },
+      },
+    });
+    creditosCreados.push(credito);
+  }
+
+  console.log(`Créditos demo creados: ${creditosCreados.length}`);
+
+  // ── Cobranza demo ──────────────────────────────────────────────────────
+  const creditosAprobados = creditosCreados.filter(c => c.estatus === 'APROBADO');
+  for (const cred of creditosAprobados.slice(0, 3)) {
+    const clienteCob = clientesCreados.find(c => c.id === cred.clienteId);
+    if (!clienteCob) continue;
+    await prisma.cobranza.upsert({
+      where: { id: 'cob-' + cred.folio },
+      update: {},
+      create: {
+        id: 'cob-' + cred.folio,
+        creditoId: cred.id,
+        clienteId: cred.clienteId,
+        ejecutivoId: ejecutivoCobranza.id,
+        montoAdeudado: Number(cred.mensualidad) * 2, // 2 mensualidades de adeudo demo
+        diasVencido: Math.floor(Math.random() * 45) + 1,
+        riesgo: clienteCob.riesgo,
+        estatus: 'PENDIENTE' as any,
+        fechaProxPago: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // +5 días
+        ultimaAccion: 'Llamada inicial',
+        fechaUltAccion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    }).catch(() => {}); // ignora si ya existe
+  }
+
+  console.log('Cobranza demo creada.');
   console.log('\nCRM_CRT seed completado.');
   console.log('\nCuentas demo:');
-  console.log('  admin@casaruiz.mx / Admin123!  → ADMINISTRADOR');
-  console.log('  crm1@casaruiz.mx / CRM123!     → EJECUTIVO_CRM');
-  console.log('  credito1@casaruiz.mx / Cred123! → CREDITO');
-  console.log('  cobranza1@casaruiz.mx / Cred123! → COBRANZA');
+  console.log('  admin@casaruiz.mx / Admin123!     → ADMINISTRADOR');
+  console.log('  supervisor@casaruiz.mx / Admin123! → SUPERVISOR');
+  console.log('  crm1@casaruiz.mx / CRM123!        → EJECUTIVO_CRM');
+  console.log('  credito1@casaruiz.mx / Cred123!   → CREDITO');
+  console.log('  cobranza1@casaruiz.mx / Cred123!  → COBRANZA');
 }
 
 main()

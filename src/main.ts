@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as express from 'express';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   // ── Startup Security Assertions ────────────────────────────────────────────
@@ -48,6 +49,9 @@ async function bootstrap() {
       permittedCrossDomainPolicies: { permittedPolicies: 'none' },
     }),
   );
+
+  // ── Cookie Parser (required for httpOnly cookie auth) ─────────────────────
+  app.use(cookieParser());
 
   // ── Body Size Limits (DoS prevention) ─────────────────────────────────────
   app.use(express.json({ limit: '1mb' }));

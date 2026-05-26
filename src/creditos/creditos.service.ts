@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCreditoDto, UpdateCreditoDto } from './dto/credito.dto';
 import { ScoringService } from '../scoring/scoring.service';
@@ -12,9 +13,12 @@ export class CreditosService {
     private audit: AuditService,
   ) {}
 
-  private generateFolio() {
-    const num = Math.floor(Math.random() * 9000) + 1000;
-    return `CR-${num}`;
+  /** Folio único garantizado: CR-YYYYMMDD-XXXXXX (6 hex chars de UUID v4 = ~16.7M combinaciones/día) */
+  private generateFolio(): string {
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const unique = uuidv4().replace(/-/g, '').slice(0, 6).toUpperCase();
+    return `CR-${ymd}-${unique}`;
   }
 
   async findAll(filters: { estatus?: string; ejecutivoId?: string; page?: number; limit?: number } = {}) {
