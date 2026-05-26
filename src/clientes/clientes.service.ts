@@ -16,13 +16,14 @@ export class ClientesService {
     return `C-${ymd}-${unique}`;
   }
 
-  async findAll(filters: { sucursalId?: string; estatus?: string; riesgo?: string; page?: number; limit?: number } = {}) {
-    const { sucursalId, estatus, riesgo, page = 1, limit = 20 } = filters;
+  async findAll(filters: { sucursalId?: string; estatus?: string; riesgo?: string; q?: string; page?: number; limit?: number } = {}) {
+    const { sucursalId, estatus, riesgo, q, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
     const where: any = {};
     if (sucursalId) where.sucursalId = sucursalId;
     if (estatus) where.estatus = estatus;
     if (riesgo) where.riesgo = riesgo;
+    if (q) where.nombre = { contains: q, mode: 'insensitive' };
 
     const [data, total] = await Promise.all([
       this.prisma.cliente.findMany({

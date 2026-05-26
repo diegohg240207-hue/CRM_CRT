@@ -13,20 +13,28 @@ export class ClientesController {
   constructor(private svc: ClientesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listar cartera de clientes' })
+  @ApiOperation({ summary: 'Listar cartera de clientes (soporta ?q= búsqueda por nombre)' })
   findAll(
     @Query('sucursalId') sucursalId?: string,
     @Query('estatus') estatus?: string,
     @Query('riesgo') riesgo?: string,
+    @Query('q') q?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return this.svc.findAll({ sucursalId, estatus, riesgo, page: +page, limit: +limit });
+    return this.svc.findAll({ sucursalId, estatus, riesgo, q, page: +page, limit: +limit });
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
+  }
+
+  @Get(':id/linea')
+  @ApiOperation({ summary: 'Obtener línea de crédito del cliente' })
+  async getLinea(@Param('id') id: string) {
+    const cliente = await this.svc.findOne(id);
+    return (cliente as any).lineaCredito ?? null;
   }
 
   @Post()

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CreditosService } from './creditos.service';
@@ -65,6 +65,16 @@ export class CreditosController {
 
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateCreditoDto, @CurrentUser('id') userId: string) {
+    return this.svc.update(id, dto, userId);
+  }
+
+  @Patch(':id/estatus')
+  @ApiOperation({ summary: 'Cambiar estatus de crédito (ACTIVO, LIQUIDADO, etc.)' })
+  updateEstatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateCreditoDto,
+    @CurrentUser('id') userId: string,
+  ) {
     return this.svc.update(id, dto, userId);
   }
 }

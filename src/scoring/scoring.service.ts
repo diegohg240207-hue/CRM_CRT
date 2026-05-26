@@ -64,7 +64,7 @@ export class ScoringService {
       decision = 'APROBADO';
       lineaAprobada = 45000;
       riesgo = 'BAJO';
-    } else if (scoreFinal >= 550) {
+    } else if (scoreFinal >= 650) {
       decision = 'REQUIERE_AVAL';
       lineaAprobada = 15000;
       riesgo = 'MEDIO';
@@ -127,9 +127,9 @@ export class ScoringService {
         { anos: '1', pts: 1 },
       ],
       decisiones: [
-        { score: '≥700', decision: 'APROBADO', linea: '$45,000' },
-        { score: '550-699', decision: 'REQUIERE_AVAL', linea: '$15,000' },
-        { score: '<550', decision: 'RECHAZADO', linea: null },
+        { score: '≥700 pts', decision: 'APROBADO', linea: '$45,000' },
+        { score: '650-699 pts', decision: 'REQUIERE_AVAL', linea: '$15,000' },
+        { score: '<650 pts', decision: 'RECHAZADO', linea: null },
       ],
     };
   }
