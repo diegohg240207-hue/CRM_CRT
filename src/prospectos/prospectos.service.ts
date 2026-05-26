@@ -81,7 +81,7 @@ export class ProspectosService {
       data: {
         folio: this.generateFolio(),
         ...dto,
-        score: this.calcularScoreComercial(),
+        score: this.calcularScoreComercial(dto),
       } as any,
       include: {
         sucursal: { select: { nombre: true } },
@@ -123,8 +123,32 @@ export class ProspectosService {
     });
   }
 
-  // TODO: Reemplazar con scoring real basado en datos del prospecto (historial, perfil, producto)
-  private calcularScoreComercial(): number {
-    return Math.floor(Math.random() * 40) + 50;
+  /**
+   * Score comercial determinista basado en perfil del prospecto.
+   * Escala: 50–95 pts.
+   * Variables: prioridad (30), monto estimado (15), fuente (10).
+   * Sin Math.random() — resultado estable y auditable.
+   */
+  private calcularScoreComercial(dto: Partial<{ montoEstimado: number; prioridad: string; fuente: string }>): number {
+    let score = 50; // base
+
+    // Prioridad comercial (max +30)
+    if (dto.prioridad === 'ALTA') score += 30;
+    else if (dto.prioridad === 'MEDIA') score += 18;
+    else score += 5; // BAJA
+
+    // Monto estimado como señal de capacidad (max +15)
+    const monto = Number(dto.montoEstimado || 0);
+    if (monto >= 30000) score += 15;
+    else if (monto >= 20000) score += 12;
+    else if (monto >= 10000) score += 8;
+    else if (monto >= 5000) score += 4;
+
+    // Fuente de prospecto (max +10)
+    if (dto.fuente === 'Referido') score += 10;
+    else if (dto.fuente === 'Cartera') score += 8;
+    else if (dto.fuente === 'Digital') score += 5;
+
+    return Math.min(95, score);
   }
 }
