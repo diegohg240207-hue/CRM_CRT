@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { EvaluarScoringDto } from './dto/scoring.dto';
 
 interface ScoringResult {
@@ -18,9 +19,9 @@ interface ScoringResult {
 
 @Injectable()
 export class ScoringService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
-  evaluar(dto: EvaluarScoringDto): ScoringResult {
+  async evaluar(dto: EvaluarScoringDto, usuarioId?: string): Promise<ScoringResult> {
     // Buró: max 50 pts
     let ptsBuro = 5;
     if (dto.scoreBuro >= 750) ptsBuro = 50;
@@ -76,7 +77,7 @@ export class ScoringService {
 
     const probabilidad = Math.min(98, Math.max(5, Math.round((scoreFinal / 1000) * 100)));
 
-    return {
+    const result: ScoringResult = {
       scoreBuro: dto.scoreBuro, ptsBuro,
       vivienda: dto.vivienda, ptsVivienda,
       salario: dto.salario, ptsSalario,
@@ -89,6 +90,16 @@ export class ScoringService {
       lineaAprobada,
       probabilidad,
     };
+
+    // A-3 Audit log — registra evaluación sin datos sensibles del cliente
+    await this.audit.log({
+      accion: 'EVALUAR_SCORING',
+      entidad: 'Scoring',
+      usuarioId,
+      datos: { scoreFinal, riesgo, decision, lineaAprobada },
+    });
+
+    return result;
   }
 
   async getReglas() {

@@ -3,11 +3,14 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CobranzaService } from './cobranza.service';
 import { RegistrarAccionDto, UpdateCobranzaDto } from './dto/cobranza.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('cobranza')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'COBRANZA' as any, 'CREDITO' as any)
 @Controller('cobranza')
 export class CobranzaController {
   constructor(private svc: CobranzaService) {}
@@ -36,6 +39,7 @@ export class CobranzaController {
   findOne(@Param('id') id: string) { return this.svc.findOne(id); }
 
   @Post(':id/accion')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'COBRANZA' as any)
   @ApiOperation({ summary: 'Registrar acción de cobranza (llamada, WhatsApp, etc.)' })
   registrarAccion(
     @Param('id') id: string,

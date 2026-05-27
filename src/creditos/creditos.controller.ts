@@ -4,11 +4,14 @@ import { Response } from 'express';
 import { CreditosService } from './creditos.service';
 import { CreateCreditoDto, UpdateCreditoDto } from './dto/credito.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('creditos')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any, 'EJECUTIVO_CRM' as any, 'COBRANZA' as any)
 @Controller('creditos')
 export class CreditosController {
   constructor(private svc: CreditosService) {}
@@ -29,6 +32,7 @@ export class CreditosController {
   getKpis() { return this.svc.getKpis(); }
 
   @Get('export')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any)
   @ApiOperation({ summary: 'Exportar cartera de créditos en CSV' })
   async exportCsv(
     @Query('estatus') estatus: string,
@@ -58,17 +62,20 @@ export class CreditosController {
   findOne(@Param('id') id: string) { return this.svc.findOne(id); }
 
   @Post()
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any, 'EJECUTIVO_CRM' as any)
   @ApiOperation({ summary: 'Crear solicitud de crédito con scoring automático' })
   create(@Body() dto: CreateCreditoDto, @CurrentUser('id') userId: string) {
     return this.svc.create(dto, userId);
   }
 
   @Put(':id')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any)
   update(@Param('id') id: string, @Body() dto: UpdateCreditoDto, @CurrentUser('id') userId: string) {
     return this.svc.update(id, dto, userId);
   }
 
   @Patch(':id/estatus')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any)
   @ApiOperation({ summary: 'Cambiar estatus de crédito (ACTIVO, LIQUIDADO, etc.)' })
   updateEstatus(
     @Param('id') id: string,

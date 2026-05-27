@@ -3,11 +3,14 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger'
 import { ProspectosService } from './prospectos.service';
 import { CreateProspectoDto, UpdateProspectoDto, MoverEtapaDto, CreateInteraccionDto } from './dto/prospecto.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('prospectos')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'EJECUTIVO_CRM' as any)
 @Controller('prospectos')
 export class ProspectosController {
   constructor(private svc: ProspectosService) {}
