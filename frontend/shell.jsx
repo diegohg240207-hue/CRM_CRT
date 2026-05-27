@@ -146,8 +146,9 @@ const Header = ({ page, onOpenCmd }) => {
             </>
           }
         </div>
-        {/* PENDIENTE BACKEND: módulo de citas/agenda */}
-        <button className="icon-btn" title="Calendario — próximamente" onClick={() => alert('Módulo de calendario disponible en próxima versión.')}><Icon name="cal" /></button>
+        <span title="Calendario — próxima versión" style={{ display: 'inline-flex' }}>
+          <button className="icon-btn" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="cal" /></button>
+        </span>
         <div className="vline"></div>
         <button className="btn btn-primary" onClick={onOpenCmd}><Icon name="plus" size={15} /> Nueva acción</button>
       </div>

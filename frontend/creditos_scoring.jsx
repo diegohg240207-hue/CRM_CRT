@@ -204,8 +204,9 @@ const Scoring = () => {
           <div className="sub">Evaluación crediticia en tiempo real · variables editables · decisión automática</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* PENDIENTE BACKEND: navega a Config → Reglas de scoring */}
-          <button className="btn btn-ghost" onClick={() => alert('Configura las reglas en Sistema → Configuración → Reglas de scoring')}><Icon name="settings" size={15}/> Configurar reglas</button>
+          <span title="Configurar en: Sistema → Configuración → Reglas de scoring" style={{ display: 'inline-flex' }}>
+            <button className="btn btn-ghost" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="settings" size={15}/> Configurar reglas</button>
+          </span>
           <button className="btn btn-primary" disabled={guardando}
             onClick={async () => {
               setGuardando(true);

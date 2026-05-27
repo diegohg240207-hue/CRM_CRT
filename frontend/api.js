@@ -158,6 +158,7 @@ const CRM_Clientes = {
     return api.get(`/clientes${qs ? '?' + qs : ''}`);
   },
   getOne:        (id)       => api.get(`/clientes/${id}`),
+  getLinea:      (id)       => api.get(`/clientes/${id}/linea`),
   create:        (data)     => api.post('/clientes', data),
   update:        (id, data) => api.put(`/clientes/${id}`, data),
   aumentarLinea: (id, data) => api.patch(`/clientes/${id}/linea`, data),
@@ -169,10 +170,11 @@ const CRM_Creditos = {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/creditos${qs ? '?' + qs : ''}`);
   },
-  getKpis: ()           => api.get('/creditos/kpis'),
-  getOne:  (id)         => api.get(`/creditos/${id}`),
-  create:  (data)       => api.post('/creditos', data),
-  update:  (id, data)   => api.put(`/creditos/${id}`, data),
+  getKpis:      ()           => api.get('/creditos/kpis'),
+  getOne:       (id)         => api.get(`/creditos/${id}`),
+  create:       (data)       => api.post('/creditos', data),
+  update:       (id, data)   => api.put(`/creditos/${id}`, data),
+  patchEstatus: (id, data)   => api.patch(`/creditos/${id}/estatus`, data),
 };
 
 // ==================== SCORING ====================

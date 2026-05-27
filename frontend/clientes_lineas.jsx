@@ -28,11 +28,120 @@ const normalizeC = (c) => ({
   score:   c.scoreInterno || c.scoreBuro || 0,
 });
 
+// ============== MODAL NUEVO CLIENTE ==============
+const NuevoClienteModal = ({ onClose, onCreate }) => {
+  const [f, setF] = useState({
+    nombre: '', telefono: '', email: '', curp: '', rfc: '',
+    domicilio: '', sucursalId: '', ejecutivoId: '', scoreBuro: 700, lineaCredito: 15000,
+  });
+  const [sucursales, setSucursales] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.CRM_API.sucursales.getAll().catch(() => null).then(ss => {
+      if (ss?.length) { setSucursales(ss); setF(prev => ({ ...prev, sucursalId: ss[0].id })); }
+    });
+    const session = window.CRM_API.auth.getSession();
+    if (session?.user?.id) setF(prev => ({ ...prev, ejecutivoId: session.user.id }));
+  }, []);
+
+  const riesgoEstimado = f.scoreBuro >= 700 ? '🟢 Riesgo BAJO' : f.scoreBuro >= 550 ? '🟡 Riesgo MEDIO' : '🔴 Riesgo ALTO';
+
+  const handleCreate = async () => {
+    if (!f.nombre.trim() || !f.telefono.trim() || !f.sucursalId) {
+      setError('Nombre, teléfono y sucursal son requeridos.'); return;
+    }
+    setSaving(true); setError('');
+    try {
+      const created = await window.CRM_API.clientes.create({
+        nombre: f.nombre.trim(),
+        telefono: f.telefono.trim(),
+        email: f.email.trim() || undefined,
+        curp: f.curp.trim().toUpperCase() || undefined,
+        rfc: f.rfc.trim().toUpperCase() || undefined,
+        domicilio: f.domicilio.trim() || undefined,
+        sucursalId: f.sucursalId,
+        ejecutivoId: f.ejecutivoId || undefined,
+        scoreBuro: Number(f.scoreBuro),
+        lineaCredito: Number(f.lineaCredito),
+      });
+      onCreate && onCreate(normalizeC(created));
+      onClose();
+    } catch (e) { setError(e.message || 'Error al crear el cliente.'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="drawer-backdrop" onClick={onClose}>
+      <div className="drawer" onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--ink-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ fontSize: 18 }}>Nuevo cliente</h3>
+            <div style={{ color: 'var(--ink-500)', fontSize: 12, marginTop: 2 }}>Alta en cartera · POST /clientes</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="x"/></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && <div style={{ padding: 10, background: '#fff0ee', color: '#c64400', borderRadius: 8, fontSize: 13 }}>{error}</div>}
+          <div className="field"><label>Nombre completo *</label>
+            <input className="input" value={f.nombre} onChange={e => setF({...f, nombre: e.target.value})} placeholder="Ej. María López Hernández"/>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="field"><label>Teléfono *</label>
+              <input className="input" value={f.telefono} onChange={e => setF({...f, telefono: e.target.value})} placeholder="341 000 0000"/>
+            </div>
+            <div className="field"><label>Email</label>
+              <input className="input" type="email" value={f.email} onChange={e => setF({...f, email: e.target.value})} placeholder="correo@ejemplo.com"/>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="field"><label>CURP</label>
+              <input className="input" value={f.curp} onChange={e => setF({...f, curp: e.target.value.toUpperCase()})} placeholder="LOPM850101MJCPRR09" maxLength={18}/>
+            </div>
+            <div className="field"><label>RFC</label>
+              <input className="input" value={f.rfc} onChange={e => setF({...f, rfc: e.target.value.toUpperCase()})} placeholder="LOPM850101AB1" maxLength={13}/>
+            </div>
+          </div>
+          <div className="field"><label>Domicilio</label>
+            <input className="input" value={f.domicilio} onChange={e => setF({...f, domicilio: e.target.value})} placeholder="Calle, número, colonia, ciudad"/>
+          </div>
+          <div className="field"><label>Sucursal *</label>
+            <select className="select" value={f.sucursalId} onChange={e => setF({...f, sucursalId: e.target.value})}>
+              {sucursales.length === 0 && <option value="">Cargando sucursales...</option>}
+              {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="field">
+              <label>Score Buró <span style={{ color: 'var(--ink-400)', fontWeight: 400 }}>({f.scoreBuro} pts)</span></label>
+              <input className="input" type="number" min={300} max={850} value={f.scoreBuro} onChange={e => setF({...f, scoreBuro: +e.target.value})}/>
+              <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 4 }}>{riesgoEstimado}</div>
+            </div>
+            <div className="field">
+              <label>Línea de crédito inicial</label>
+              <input className="input" type="number" min={0} step={1000} value={f.lineaCredito} onChange={e => setF({...f, lineaCredito: +e.target.value})}/>
+              <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 4 }}>{money(f.lineaCredito)}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--ink-100)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving || !f.sucursalId}>
+            {saving ? 'Guardando…' : 'Crear cliente'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // FIX: búsqueda funcional en Clientes con datos reales de backend
 const Clientes = ({ onOpenClient }) => {
   const [q, setQ] = useState('');
   const [filtroRiesgo, setFiltroRiesgo] = useState('todos');
   const [clientes, setClientes] = useState(CLIENTES);
+  const [showNew, setShowNew] = useState(false);
   const [kpisC, setKpisC] = useState({ total: 3184, lineaProm: 26500, recompra: 62, leales: 411 });
 
   useEffect(() => {
@@ -65,8 +174,7 @@ const Clientes = ({ onOpenClient }) => {
         <button className="btn btn-ghost" onClick={() => setFiltroRiesgo(filtroRiesgo === 'todos' ? 'alto' : 'todos')}>
           <Icon name="filter" size={15}/> {filtroRiesgo === 'todos' ? 'Segmentos' : `Riesgo: ${filtroRiesgo}`}
         </button>
-        {/* PENDIENTE BACKEND: POST /clientes — modal de alta requiere guardado en DB */}
-        <button className="btn btn-accent" onClick={() => alert('Alta de clientes disponible con backend conectado.\nEndpoint: POST /clientes')}><Icon name="plus" size={15}/> Nuevo cliente</button>
+        <button className="btn btn-accent" onClick={() => setShowNew(true)}><Icon name="plus" size={15}/> Nuevo cliente</button>
       </div>
     </div>
 
@@ -100,13 +208,13 @@ const Clientes = ({ onOpenClient }) => {
           </div>
         </div>
       </div>
-      {clientesFiltrados.length === 0 && (
+      {clientesFiltrados.length === 0 && q && (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--ink-400)', fontSize: 14 }}>
           <Icon name="search" size={32} stroke="var(--ink-200)"/><br/>
           No se encontraron clientes con "{q}"
         </div>
       )}
-      <table className="tbl" style={{ display: clientesFiltrados.length === 0 ? 'none' : '' }}>
+      <table className="tbl" style={{ display: clientesFiltrados.length === 0 && q ? 'none' : '' }}>
         <thead>
           <tr><th>ID</th><th>Cliente</th><th>Sucursal</th><th>Línea / Uso</th><th>Score</th><th>Riesgo</th><th>Estatus</th><th>Próx. pago</th><th>Compras</th><th></th></tr>
         </thead>
@@ -149,6 +257,12 @@ const Clientes = ({ onOpenClient }) => {
         </tbody>
       </table>
     </div>
+    {showNew && (
+      <NuevoClienteModal
+        onClose={() => setShowNew(false)}
+        onCreate={(c) => { setClientes(prev => [c, ...prev]); setShowNew(false); }}
+      />
+    )}
   </>
   );
 };
@@ -265,11 +379,11 @@ const ClienteDetail = ({ c, onClose }) => {
             onClick={() => window.location.href = `tel:${c.tel.replace(/\D/g,'')}`}>
             <Icon name="phone" size={14}/> Llamar
           </button>
-          {/* PENDIENTE BACKEND: flujo de nueva venta / solicitud de crédito */}
-          <button className="btn btn-accent" style={{ flex: 1, justifyContent: 'center' }}
-            onClick={() => alert(`Nueva venta para ${c.nombre} — disponible con backend conectado.\nConectará a módulo de Créditos y Scoring.`)}>
-            <Icon name="cards" size={14}/> Nueva venta
-          </button>
+          <span title="Próxima versión · conectará al módulo de Créditos y Scoring" style={{ flex: 1, display: 'inline-flex' }}>
+            <button className="btn btn-accent" disabled style={{ flex: 1, justifyContent: 'center', opacity: 0.45, pointerEvents: 'none' }}>
+              <Icon name="cards" size={14}/> Nueva venta
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -306,14 +420,16 @@ const Lineas = () => {
           <div className="sub">Crecimiento gradual basado en comportamiento de pago, recompra y score interno</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* PENDIENTE BACKEND: GET /reportes/lineas */}
-          <button className="btn btn-ghost" onClick={() => alert('Reporte de líneas de crédito — disponible con backend.')}>
-            <Icon name="chart" size={15}/> Reporte
-          </button>
-          {/* PENDIENTE BACKEND: POST /clientes/aumentos-masivos */}
-          <button className="btn btn-accent" onClick={() => alert('Aumentos masivos — requiere evaluación con backend conectado.\n412 clientes elegibles detectados.')}>
-            <Icon name="trend" size={15}/> Sugerir aumentos masivos
-          </button>
+          <span title="Próxima versión · GET /reportes/lineas" style={{ display: 'inline-flex' }}>
+            <button className="btn btn-ghost" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}>
+              <Icon name="chart" size={15}/> Reporte
+            </button>
+          </span>
+          <span title="Próxima versión · POST /clientes/aumentos-masivos" style={{ display: 'inline-flex' }}>
+            <button className="btn btn-accent" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}>
+              <Icon name="trend" size={15}/> Sugerir aumentos masivos
+            </button>
+          </span>
         </div>
       </div>
 

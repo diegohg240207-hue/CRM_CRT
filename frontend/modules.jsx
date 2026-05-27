@@ -53,10 +53,12 @@ const Cobranza = () => {
         <div className="sub">{lista.length} cuentas en seguimiento · {money(kpisData.porCobrarSemana)} por cobrar esta semana · mora {kpisData.mora30dias || 0} cuentas &gt;30d</div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        {/* PENDIENTE BACKEND: requiere endpoint POST /cobranza/campana */}
-        <button className="btn btn-ghost" title="Disponible con backend" onClick={() => alert('Función disponible en la próxima versión con backend conectado.')}><Icon name="phone" size={15}/> Campaña masiva</button>
-        {/* PENDIENTE BACKEND: requiere endpoint POST /cobranza/:id/acuerdo */}
-        <button className="btn btn-accent" title="Disponible con backend" onClick={() => alert('Generación de acuerdos disponible con backend conectado.')}><Icon name="doc" size={15}/> Generar acuerdo</button>
+        <span title="Próxima versión · requiere endpoint POST /cobranza/campana" style={{ display: 'inline-flex' }}>
+          <button className="btn btn-ghost" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="phone" size={15}/> Campaña masiva</button>
+        </span>
+        <span title="Próxima versión · requiere endpoint POST /cobranza/:id/acuerdo" style={{ display: 'inline-flex' }}>
+          <button className="btn btn-accent" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="doc" size={15}/> Generar acuerdo</button>
+        </span>
       </div>
     </div>
 
@@ -96,9 +98,10 @@ const Cobranza = () => {
                 <td style={{ fontSize: 12, color: 'var(--ink-500)' }}>{c.accion}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    {/* PENDIENTE BACKEND: click-to-call / integración telefónica */}
-                    <button className="btn btn-light btn-sm" title={`Llamar a ${c.cliente}`}
-                      onClick={() => { window.location.href = `tel:${c.id}`; }}><Icon name="phone" size={13}/></button>
+                    <button className="btn btn-light btn-sm" title={`Llamar a ${c.cliente}: ${c.tel || '—'}`}
+                      onClick={() => c.tel && (window.location.href = `tel:${c.tel.replace(/\D/g,'')}`)}>
+                      <Icon name="phone" size={13}/>
+                    </button>
                     {/* PENDIENTE BACKEND: envío de Whatsapp */}
                     <button className="btn btn-light btn-sm" title={`Whatsapp a ${c.cliente}`}
                       onClick={() => window.open(`https://wa.me/?text=Hola+${encodeURIComponent(c.cliente)},+te+contactamos+de+Casa+Ruiz+respecto+a+tu+pago.`, '_blank')}><Icon name="mail" size={13}/></button>
@@ -326,6 +329,75 @@ const Config = () => {
 };
 
 const ROL_LABELS = { ADMINISTRADOR: 'Administrador', SUPERVISOR: 'Supervisor', EJECUTIVO_CRM: 'Ejecutivo CRM', CREDITO: 'Crédito', COBRANZA: 'Cobranza' };
+const NuevoUsuarioModal = ({ onClose, onCreate }) => {
+  const [f, setF] = useState({ nombre: '', email: '', password: '', rol: 'EJECUTIVO_CRM', sucursalId: '' });
+  const [sucursales, setSucursales] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.CRM_API.sucursales.getAll().catch(() => null).then(ss => {
+      if (ss?.length) { setSucursales(ss); setF(prev => ({ ...prev, sucursalId: ss[0].id })); }
+    });
+  }, []);
+
+  const handleCreate = async () => {
+    if (!f.nombre.trim() || !f.email.trim() || !f.password.trim()) {
+      setError('Nombre, email y contraseña son requeridos.'); return;
+    }
+    setSaving(true); setError('');
+    try {
+      const created = await window.CRM_API.usuarios.create({
+        nombre: f.nombre.trim(), email: f.email.trim(), password: f.password,
+        rol: f.rol, sucursalId: f.sucursalId || undefined,
+      });
+      onCreate && onCreate(created); onClose();
+    } catch (e) { setError(e.message || 'Error al crear el usuario.'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="drawer-backdrop" onClick={onClose}>
+      <div className="drawer" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--ink-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ fontSize: 18 }}>Invitar usuario</h3>
+            <div style={{ color: 'var(--ink-500)', fontSize: 12, marginTop: 2 }}>Alta en sistema · acceso inmediato</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="x"/></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && <div style={{ padding: 10, background: '#fff0ee', color: '#c64400', borderRadius: 8, fontSize: 13 }}>{error}</div>}
+          <div className="field"><label>Nombre completo *</label><input className="input" value={f.nombre} onChange={e => setF({...f, nombre: e.target.value})} placeholder="Ej. Ana García Ruiz"/></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="field"><label>Email *</label><input className="input" type="email" value={f.email} onChange={e => setF({...f, email: e.target.value})} placeholder="ana@casaruiz.mx"/></div>
+            <div className="field"><label>Contraseña inicial *</label><input className="input" type="password" value={f.password} onChange={e => setF({...f, password: e.target.value})} placeholder="Mínimo 8 caracteres"/></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="field"><label>Rol</label>
+              <select className="select" value={f.rol} onChange={e => setF({...f, rol: e.target.value})}>
+                {Object.entries(ROL_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Sucursal</label>
+              <select className="select" value={f.sucursalId} onChange={e => setF({...f, sucursalId: e.target.value})}>
+                {sucursales.length === 0 && <option value="">Cargando...</option>}
+                {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--ink-100)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
+            {saving ? 'Guardando…' : 'Crear usuario'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ConfigUsuarios = () => {
   const [usuarios, setUsuarios] = useState([
     { id: '1', nombre: 'Alejandro Ramos', email: 'alejandro.ramos@casaruiz.mx', rol: 'ADMINISTRADOR', sucursal: { nombre: 'Tamazula' }, activo: true, lastLogin: null },
@@ -334,6 +406,7 @@ const ConfigUsuarios = () => {
     { id: '4', nombre: 'Carmen Olvera',   email: 'carmen.olvera@casaruiz.mx',   rol: 'COBRANZA',      sucursal: { nombre: 'Tepatitlán' }, activo: true, lastLogin: null },
     { id: '5', nombre: 'Luis Fernández',  email: 'luis.fernandez@casaruiz.mx',  rol: 'SUPERVISOR',    sucursal: { nombre: 'GDL Norte' }, activo: false, lastLogin: null },
   ]);
+  const [showInvitar, setShowInvitar] = useState(false);
 
   useEffect(() => {
     window.CRM_API.usuarios.getAll({ limit: 50 }).catch(() => null).then(r => {
@@ -354,8 +427,7 @@ const ConfigUsuarios = () => {
   return (
   <>
     <div className="card-head"><h3>Usuarios ({usuarios.length})</h3>
-      {/* PENDIENTE BACKEND: POST /usuarios */}
-      <button className="btn btn-accent btn-sm" onClick={() => alert('Alta de usuario disponible con backend conectado.\nEndpoint: POST /usuarios')}><Icon name="plus" size={13}/> Invitar usuario</button>
+      <button className="btn btn-accent btn-sm" onClick={() => setShowInvitar(true)}><Icon name="plus" size={13}/> Invitar usuario</button>
     </div>
     <table className="tbl">
       <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Sucursal</th><th>Estado</th><th>Último acceso</th></tr></thead>
@@ -372,6 +444,12 @@ const ConfigUsuarios = () => {
         ))}
       </tbody>
     </table>
+    {showInvitar && (
+      <NuevoUsuarioModal
+        onClose={() => setShowInvitar(false)}
+        onCreate={(u) => { setUsuarios(prev => [u, ...prev]); setShowInvitar(false); }}
+      />
+    )}
   </>
   );
 };
@@ -388,8 +466,9 @@ const ConfigRoles = () => {
   return (
     <>
       <div className="card-head"><h3>Roles y permisos</h3>
-        {/* PENDIENTE BACKEND: la gestión de roles requiere endpoint /config/roles */}
-        <button className="btn btn-ghost btn-sm" onClick={() => alert('Creación de roles personalizados — disponible con backend conectado.')}><Icon name="plus" size={13}/> Nuevo rol</button>
+        <span title="Próxima versión · gestión de roles avanzada" style={{ display: 'inline-flex' }}>
+          <button className="btn btn-ghost btn-sm" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="plus" size={13}/> Nuevo rol</button>
+        </span>
       </div>
       <div style={{ padding: 16, overflowX: 'auto' }}>
         <table className="tbl" style={{ minWidth: 600 }}>
@@ -446,8 +525,9 @@ const ConfigReglas = () => (
 const ConfigSucursales = () => (
   <>
     <div className="card-head"><h3>Sucursales</h3>
-      {/* PENDIENTE BACKEND: POST /sucursales */}
-      <button className="btn btn-accent btn-sm" onClick={() => alert('Alta de sucursales disponible con backend conectado.\nEndpoint: POST /sucursales')}><Icon name="plus" size={13}/> Nueva sucursal</button>
+      <span title="Próxima versión · POST /sucursales" style={{ display: 'inline-flex' }}>
+        <button className="btn btn-accent btn-sm" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="plus" size={13}/> Nueva sucursal</button>
+      </span>
     </div>
     <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {SUCURSALES.map(s => (
@@ -462,8 +542,9 @@ const ConfigSucursales = () => (
               <span><b style={{ color: 'var(--azul)' }}>{money(12000000)}</b> cartera</span>
             </div>
           </div>
-          {/* PENDIENTE BACKEND: PUT /sucursales/:id */}
-          <button className="btn btn-light btn-sm" title={`Editar ${s.name}`} onClick={() => alert(`Editar sucursal "${s.name}" — disponible con backend.`)}><Icon name="edit" size={12}/></button>
+          <span title={`Próxima versión · PUT /sucursales/:id`} style={{ display: 'inline-flex' }}>
+            <button className="btn btn-light btn-sm" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}><Icon name="edit" size={12}/></button>
+          </span>
         </div>
       ))}
     </div>

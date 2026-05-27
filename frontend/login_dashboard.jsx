@@ -288,11 +288,11 @@ const Dashboard = ({ user }) => {
           <button className="btn btn-ghost" title="Filtrar por sucursal — disponible con backend">
             <Icon name="filter" size={15}/> Sucursal
           </button>
-          {/* PENDIENTE BACKEND: análisis IA requiere endpoint /reportes/resumen-ia */}
-          <button className="btn btn-accent"
-            onClick={() => alert('Resumen IA disponible próximamente. Requiere integración con motor de análisis.')}>
-            <Icon name="sparkle" size={15}/> Resumen IA
-          </button>
+          <span title="Próxima versión · requiere integración con motor de análisis IA" style={{ display: 'inline-flex' }}>
+            <button className="btn btn-accent" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}>
+              <Icon name="sparkle" size={15}/> Resumen IA
+            </button>
+          </span>
         </div>
       </div>
 

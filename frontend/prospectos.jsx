@@ -30,6 +30,7 @@ const normalizeP = (p) => ({
 const Prospectos = ({ onOpenDetail }) => {
   const [view, setView] = useState('kanban'); // kanban | tabla | timeline
   const [filter, setFilter] = useState('todos');
+  const [etapaFilter, setEtapaFilter] = useState('');
   const [data, setData] = useState(PROSPECTOS);
   const [showNew, setShowNew] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -48,7 +49,10 @@ const Prospectos = ({ onOpenDetail }) => {
       .finally(() => setCargando(false));
   }, []);
 
-  const filtered = data.filter(p => filter === 'todos' || p.prioridad === filter);
+  const filtered = data.filter(p =>
+    (filter === 'todos' || p.prioridad === filter) &&
+    (!etapaFilter || p.etapa === etapaFilter)
+  );
   const byEtapa = (id) => filtered.filter(p => p.etapa === id);
 
   const moveCard = (id, newEtapa) => {
@@ -69,16 +73,17 @@ const Prospectos = ({ onOpenDetail }) => {
           <div className="sub">{data.length} prospectos · 56% en seguimiento activo · próximo cierre estimado: <b>Estela Rivas</b></div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* Los filtros ya están integrados debajo (prioridad). Este botón es para filtros avanzados */}
-          <button className="btn btn-ghost" title="Filtros avanzados — usa los filtros de prioridad debajo"
-            onClick={() => alert('Filtros avanzados por sucursal, ejecutivo y fecha — disponibles con backend.')}>
-            <Icon name="filter" size={15}/> Filtros
+          <button className="btn btn-ghost"
+            title={filter !== 'todos' || etapaFilter ? 'Limpiar filtros activos' : 'Filtros de prioridad y etapa abajo'}
+            onClick={() => { setFilter('todos'); setEtapaFilter(''); }}
+            style={{ background: (filter !== 'todos' || etapaFilter) ? 'var(--azul-50)' : '', color: (filter !== 'todos' || etapaFilter) ? 'var(--azul)' : '' }}>
+            <Icon name="filter" size={15}/> {filter !== 'todos' || etapaFilter ? 'Limpiar filtros' : 'Filtros'}
           </button>
-          {/* PENDIENTE BACKEND: importación CSV → POST /prospectos/import */}
-          <button className="btn btn-ghost" title="Importar prospectos desde CSV"
-            onClick={() => alert('Importación de CSV disponible con backend conectado.\nEndpoint: POST /prospectos/import')}>
-            <Icon name="doc" size={15}/> Importar CSV
-          </button>
+          <span title="Próxima versión · POST /prospectos/import" style={{ display: 'inline-flex' }}>
+            <button className="btn btn-ghost" disabled style={{ opacity: 0.45, pointerEvents: 'none' }}>
+              <Icon name="doc" size={15}/> Importar CSV
+            </button>
+          </span>
           <button className="btn btn-accent" onClick={() => setShowNew(true)}><Icon name="plus" size={15}/> Nuevo prospecto</button>
         </div>
       </div>
@@ -100,6 +105,11 @@ const Prospectos = ({ onOpenDetail }) => {
               style={{ background: filter === id ? 'var(--azul-100)' : 'var(--ink-50)', color: filter === id ? 'var(--azul)' : 'var(--ink-700)' }}>{lbl}</button>
           ))}
         </div>
+        <select className="select" style={{ fontSize: 12, width: 168, marginLeft: 8 }}
+          value={etapaFilter} onChange={e => setEtapaFilter(e.target.value)}>
+          <option value="">Todas las etapas</option>
+          {ETAPAS.map(et => <option key={et.id} value={et.id}>{et.label}</option>)}
+        </select>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>Pipeline:</span>
           <span className="badge b-blue">{money(data.reduce((s,p) => s+p.monto, 0))}</span>
