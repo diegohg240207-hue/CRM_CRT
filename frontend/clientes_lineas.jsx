@@ -31,8 +31,9 @@ const normalizeC = (c) => ({
 // ============== MODAL NUEVO CLIENTE ==============
 const NuevoClienteModal = ({ onClose, onCreate }) => {
   const [f, setF] = useState({
-    nombre: '', telefono: '', email: '', curp: '', rfc: '',
-    domicilio: '', sucursalId: '', ejecutivoId: '', scoreBuro: 700, lineaCredito: 15000,
+    nombre: '', telefono: '', email: '',
+    vivienda: 'RENTADA', salarioMensual: 15000, antiguedadLaboral: 2,
+    sucursalId: '', scoreBuro: 700, lineaCredito: 15000,
   });
   const [sucursales, setSucursales] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -42,8 +43,6 @@ const NuevoClienteModal = ({ onClose, onCreate }) => {
     window.CRM_API.sucursales.getAll().catch(() => null).then(ss => {
       if (ss?.length) { setSucursales(ss); setF(prev => ({ ...prev, sucursalId: ss[0].id })); }
     });
-    const session = window.CRM_API.auth.getSession();
-    if (session?.user?.id) setF(prev => ({ ...prev, ejecutivoId: session.user.id }));
   }, []);
 
   const riesgoEstimado = f.scoreBuro >= 700 ? '🟢 Riesgo BAJO' : f.scoreBuro >= 550 ? '🟡 Riesgo MEDIO' : '🔴 Riesgo ALTO';
@@ -58,11 +57,10 @@ const NuevoClienteModal = ({ onClose, onCreate }) => {
         nombre: f.nombre.trim(),
         telefono: f.telefono.trim(),
         email: f.email.trim() || undefined,
-        curp: f.curp.trim().toUpperCase() || undefined,
-        rfc: f.rfc.trim().toUpperCase() || undefined,
-        domicilio: f.domicilio.trim() || undefined,
+        vivienda: f.vivienda,
+        salarioMensual: Number(f.salarioMensual),
+        antiguedadLaboral: Number(f.antiguedadLaboral),
         sucursalId: f.sucursalId,
-        ejecutivoId: f.ejecutivoId || undefined,
         scoreBuro: Number(f.scoreBuro),
         lineaCredito: Number(f.lineaCredito),
       });
@@ -96,15 +94,20 @@ const NuevoClienteModal = ({ onClose, onCreate }) => {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="field"><label>CURP</label>
-              <input className="input" value={f.curp} onChange={e => setF({...f, curp: e.target.value.toUpperCase()})} placeholder="LOPM850101MJCPRR09" maxLength={18}/>
+            <div className="field"><label>Vivienda *</label>
+              <select className="select" value={f.vivienda} onChange={e => setF({...f, vivienda: e.target.value})}>
+                <option value="PROPIA">Propia</option>
+                <option value="FAMILIAR">Familiar</option>
+                <option value="RENTADA">Rentada</option>
+              </select>
             </div>
-            <div className="field"><label>RFC</label>
-              <input className="input" value={f.rfc} onChange={e => setF({...f, rfc: e.target.value.toUpperCase()})} placeholder="LOPM850101AB1" maxLength={13}/>
+            <div className="field"><label>Antigüedad laboral (años) *</label>
+              <input className="input" type="number" min={0} max={50} value={f.antiguedadLaboral} onChange={e => setF({...f, antiguedadLaboral: +e.target.value})}/>
             </div>
           </div>
-          <div className="field"><label>Domicilio</label>
-            <input className="input" value={f.domicilio} onChange={e => setF({...f, domicilio: e.target.value})} placeholder="Calle, número, colonia, ciudad"/>
+          <div className="field"><label>Salario mensual (MXN) *</label>
+            <input className="input" type="number" min={0} step={500} value={f.salarioMensual} onChange={e => setF({...f, salarioMensual: +e.target.value})}/>
+            <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 4 }}>{money(f.salarioMensual)}/mes</div>
           </div>
           <div className="field"><label>Sucursal *</label>
             <select className="select" value={f.sucursalId} onChange={e => setF({...f, sucursalId: e.target.value})}>
