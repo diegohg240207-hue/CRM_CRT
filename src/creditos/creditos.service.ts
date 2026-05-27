@@ -63,7 +63,7 @@ export class CreditosService {
   async create(dto: CreateCreditoDto, usuarioId: string) {
     const { scoreBuro, vivienda, salario, capacidadPago, antiguedadLaboral, ...creditoData } = dto;
 
-    const scoringResult = this.scoring.evaluar({ scoreBuro, vivienda, salario, capacidadPago, antiguedadLaboral });
+    const scoringResult = await this.scoring.evaluar({ scoreBuro, vivienda, salario, capacidadPago, antiguedadLaboral }, usuarioId);
 
     const mensualidad = this.calcularMensualidad(dto.monto, dto.plazoMeses, dto.tasaInteres);
 
