@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClienteDto, UpdateClienteDto, AumentarLineaDto } from './dto/cliente.dto';
@@ -89,6 +89,19 @@ export class ClientesService {
   async toggleActive(id: string, usuarioId: string) {
     const cliente = await this.prisma.cliente.findUnique({ where: { id }, select: { activo: true, nombre: true } });
     if (!cliente) throw new NotFoundException('Cliente no encontrado');
+
+    // Guard: no desactivar si tiene créditos activos (evita registros huérfanos)
+    if (cliente.activo) {
+      const creditosActivos = await this.prisma.credito.count({
+        where: { clienteId: id, estatus: { in: ['APROBADO', 'ACTIVO', 'EN_REVISION', 'REQUIERE_AVAL'] } },
+      });
+      if (creditosActivos > 0) {
+        throw new BadRequestException(
+          `No se puede desactivar: el cliente tiene ${creditosActivos} crédito(s) activo(s). Liquide o rechace los créditos antes de desactivar.`,
+        );
+      }
+    }
+
     const updated = await this.prisma.cliente.update({
       where: { id },
       data: { activo: !cliente.activo },

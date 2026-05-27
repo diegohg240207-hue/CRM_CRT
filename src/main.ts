@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import helmet from 'helmet';
 import * as express from 'express';
 import * as cookieParser from 'cookie-parser';
@@ -87,6 +88,9 @@ async function bootstrap() {
     credentials: true,
     maxAge: 86400, // 24h preflight cache
   });
+
+  // ── Prisma Exception Filter (global) ──────────────────────────────────────
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   // ── Input Validation (global) ──────────────────────────────────────────────
   app.useGlobalPipes(
