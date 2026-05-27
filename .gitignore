@@ -30,3 +30,13 @@ prisma/migrations/*.sql
 
 # Testing
 coverage/
+
+# Vercel
+.vercel
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
+# Prisma seed compiled output
+prisma/seed.js
+prisma/seed.js.map
