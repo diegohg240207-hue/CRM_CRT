@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsEmail, IsBoolean, IsIn } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEmail, IsBoolean, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateClienteDto {
@@ -17,11 +17,12 @@ export class UpdateClienteDto {
   @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsString() telefono?: string;
   @IsOptional() @IsEmail() email?: string;
-  @IsOptional() vivienda?: string;
+  @IsOptional() @IsString() @IsIn(['PROPIA', 'FAMILIAR', 'RENTADA']) vivienda?: string;
   @IsOptional() @IsNumber() salarioMensual?: number;
   @IsOptional() @IsNumber() antiguedadLaboral?: number;
   @IsOptional() @IsNumber() scoreBuro?: number;
-  @IsOptional() estatus?: string;
+  @IsOptional() @IsString() estatus?: string;
+  @IsOptional() @IsBoolean() activo?: boolean;
 }
 
 export class AumentarLineaDto {

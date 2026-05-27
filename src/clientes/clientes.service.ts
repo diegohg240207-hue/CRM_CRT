@@ -19,7 +19,7 @@ export class ClientesService {
   async findAll(filters: { sucursalId?: string; estatus?: string; riesgo?: string; q?: string; page?: number; limit?: number } = {}) {
     const { sucursalId, estatus, riesgo, q, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = { activo: true }; // FIX: excluir clientes desactivados (soft delete)
     if (sucursalId) where.sucursalId = sucursalId;
     if (estatus) where.estatus = estatus;
     if (riesgo) where.riesgo = riesgo;
@@ -81,6 +81,18 @@ export class ClientesService {
     await this.findOne(id);
     const updated = await this.prisma.cliente.update({ where: { id }, data: dto as any });
     await this.audit.log({ accion: 'UPDATE', entidad: 'Cliente', entidadId: id, usuarioId, datos: dto });
+    return updated;
+  }
+
+  async toggleActive(id: string, usuarioId: string) {
+    const cliente = await this.prisma.cliente.findUnique({ where: { id }, select: { activo: true, nombre: true } });
+    if (!cliente) throw new NotFoundException('Cliente no encontrado');
+    const updated = await this.prisma.cliente.update({
+      where: { id },
+      data: { activo: !cliente.activo },
+      select: { id: true, nombre: true, activo: true },
+    });
+    await this.audit.log({ accion: updated.activo ? 'ACTIVAR' : 'DESACTIVAR', entidad: 'Cliente', entidadId: id, usuarioId });
     return updated;
   }
 

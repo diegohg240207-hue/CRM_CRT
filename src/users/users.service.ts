@@ -11,12 +11,13 @@ export class UsersService {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.prisma.usuario.findMany({
+        where: { activo: true }, // FIX: excluir usuarios desactivados (soft delete)
         skip,
         take: limit,
         select: { id: true, nombre: true, email: true, rol: true, activo: true, sucursal: true, createdAt: true, lastLogin: true },
         orderBy: { nombre: 'asc' },
       }),
-      this.prisma.usuario.count(),
+      this.prisma.usuario.count({ where: { activo: true } }),
     ]);
     return { data, total, page, limit };
   }

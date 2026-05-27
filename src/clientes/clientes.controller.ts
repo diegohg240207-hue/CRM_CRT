@@ -53,4 +53,10 @@ export class ClientesController {
   aumentarLinea(@Param('id') id: string, @Body() dto: AumentarLineaDto, @CurrentUser('id') userId: string) {
     return this.svc.aumentarLinea(id, dto, userId);
   }
+
+  @Patch(':id/toggle-active')
+  @ApiOperation({ summary: 'Activar / desactivar cliente (soft delete)' })
+  toggleActive(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.svc.toggleActive(id, userId);
+  }
 }

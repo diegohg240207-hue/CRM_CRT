@@ -23,6 +23,10 @@ const normalizeP = (p) => ({
   monto:     Number(p.montoEstimado || p.monto || 0),
   score:     p.score || 0,
   ejecutivo: p.ejecutivo?.nombre || p.ejecutivo || '—',
+  // FIX: API devuelve sucursal como objeto {nombre:'...'} — extraer string para evitar "Objects are not valid as React child"
+  sucursal:  p.sucursal?.nombre  || p.sucursalId || '—',
+  // FIX: API devuelve 'telefono'; normalizar a 'tel' para ProspectoDetail
+  tel:       p.telefono || p.tel || '',
   etiquetas: p.etiquetas || [],
   dias:      p.diasEnEtapa || 0,
 });
