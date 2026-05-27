@@ -57,17 +57,19 @@ export class ClientesService {
 
   async create(dto: CreateClienteDto, usuarioId: string) {
     const { lineaCredito: lineaAprobada, ...clienteData } = dto;
+    const scoreBuro = dto.scoreBuro ?? 0;
+    const lineaInicial = lineaAprobada ?? 0;
     const cliente = await this.prisma.cliente.create({
       data: {
         folio: this.generateFolio(),
         ...clienteData as any,
-        scoreInterno: this.calcularScoreInterno(dto.scoreBuro),
-        riesgo: this.determinarRiesgo(dto.scoreBuro),
+        scoreInterno: this.calcularScoreInterno(scoreBuro),
+        riesgo: this.determinarRiesgo(scoreBuro),
         lineaCredito: {
           create: {
-            lineaAprobada,
+            lineaAprobada: lineaInicial,
             lineaUsada: 0,
-            lineaDisponible: lineaAprobada,
+            lineaDisponible: lineaInicial,
           },
         },
       },

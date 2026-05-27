@@ -9,8 +9,8 @@ export class CreateClienteDto {
   @ApiProperty({ enum: ['PROPIA', 'FAMILIAR', 'RENTADA'] }) @IsString() @IsIn(['PROPIA', 'FAMILIAR', 'RENTADA']) vivienda: string;
   @ApiProperty() @IsNumber() salarioMensual: number;
   @ApiProperty() @IsNumber() antiguedadLaboral: number;
-  @ApiProperty() @IsNumber() scoreBuro: number;
-  @ApiProperty() @IsNumber() lineaCredito: number;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() scoreBuro?: number;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() lineaCredito?: number;
 }
 
 export class UpdateClienteDto {

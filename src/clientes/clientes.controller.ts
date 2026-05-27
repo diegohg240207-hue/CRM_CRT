@@ -42,7 +42,7 @@ export class ClientesController {
   }
 
   @Post()
-  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'EJECUTIVO_CRM' as any)
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'EJECUTIVO_CRM' as any, 'CREDITO' as any)
   @ApiOperation({ summary: 'Dar de alta cliente' })
   create(@Body() dto: CreateClienteDto, @CurrentUser('id') userId: string) {
     return this.svc.create(dto, userId);

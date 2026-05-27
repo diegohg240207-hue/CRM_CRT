@@ -61,6 +61,12 @@ export class CreditosService {
   }
 
   async create(dto: CreateCreditoDto, usuarioId: string) {
+    // Validar que el cliente exista antes de evaluar — evita error FK críptico
+    const clienteExiste = await this.prisma.cliente.findUnique({ where: { id: dto.clienteId }, select: { id: true } });
+    if (!clienteExiste) {
+      throw new NotFoundException('Selecciona un cliente registrado o convierte el prospecto antes de evaluar crédito.');
+    }
+
     const { scoreBuro, vivienda, salario, capacidadPago, antiguedadLaboral, ...creditoData } = dto;
 
     const scoringResult = await this.scoring.evaluar({ scoreBuro, vivienda, salario, capacidadPago, antiguedadLaboral }, usuarioId);
