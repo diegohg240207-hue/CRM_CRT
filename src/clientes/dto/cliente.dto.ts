@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsEmail, IsBoolean } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsEmail, IsBoolean, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateClienteDto {
@@ -6,7 +6,7 @@ export class CreateClienteDto {
   @ApiProperty() @IsString() telefono: string;
   @ApiProperty({ required: false }) @IsOptional() @IsEmail() email?: string;
   @ApiProperty() @IsString() sucursalId: string;
-  @ApiProperty({ enum: ['PROPIA', 'FAMILIAR', 'RENTADA'] }) vivienda: string;
+  @ApiProperty({ enum: ['PROPIA', 'FAMILIAR', 'RENTADA'] }) @IsString() @IsIn(['PROPIA', 'FAMILIAR', 'RENTADA']) vivienda: string;
   @ApiProperty() @IsNumber() salarioMensual: number;
   @ApiProperty() @IsNumber() antiguedadLaboral: number;
   @ApiProperty() @IsNumber() scoreBuro: number;
