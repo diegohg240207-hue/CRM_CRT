@@ -10,9 +10,40 @@ interface AuditParams {
   ipAddress?: string;
 }
 
+// B-3: Campos PII/sensibles que nunca deben persistirse en audit logs.
+// Se comparan en minúsculas para insensibilidad a mayúsculas.
+const PII_BLOCKLIST = new Set([
+  'telefono', 'tel',
+  'email', 'correo',
+  'nombre',
+  'salario', 'salariomensual',
+  'scoreburo', 'score_buro',
+  'capacidadpago',
+  'rfc', 'curp',
+  'domicilio', 'direccion', 'calle',
+  'password', 'contrasena', 'contrasenas',
+  'token', 'refreshtoken', 'accesstoken',
+  'notas',
+]);
+
 @Injectable()
 export class AuditService {
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Elimina campos PII/sensibles del objeto datos antes de persistir.
+   * Sólo opera en objetos planos (primer nivel) — no recursivo a propósito.
+   */
+  private sanitizeDatos(datos: any): any {
+    if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return datos;
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(datos)) {
+      if (!PII_BLOCKLIST.has(key.toLowerCase())) {
+        sanitized[key] = value;
+      }
+    }
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+  }
 
   async log(params: AuditParams) {
     return this.prisma.auditLog.create({
@@ -21,7 +52,7 @@ export class AuditService {
         entidad: params.entidad,
         usuarioId: params.usuarioId,
         entidadId: params.entidadId,
-        datos: params.datos,
+        datos: params.datos ? this.sanitizeDatos(params.datos) : undefined,
         ipAddress: params.ipAddress,
       },
     });
