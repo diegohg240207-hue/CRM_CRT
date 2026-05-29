@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegistrarAccionDto {
@@ -13,4 +13,20 @@ export class RegistrarAccionDto {
 export class UpdateCobranzaDto {
   @IsOptional() estatus?: string;
   @IsOptional() @IsString() ultimaAccion?: string;
+}
+
+export class RegistrarPagoDto {
+  @ApiProperty({ description: 'Monto del pago' })
+  @IsNumber()
+  monto: number;
+
+  @ApiProperty({ required: false, description: 'Referencia o número de recibo' })
+  @IsOptional()
+  @IsString()
+  referencia?: string;
+
+  @ApiProperty({ required: false, enum: ['MENSUALIDAD', 'ABONO', 'LIQUIDACION'] })
+  @IsOptional()
+  @IsString()
+  tipo?: string;
 }

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CobranzaService } from './cobranza.service';
-import { RegistrarAccionDto, UpdateCobranzaDto } from './dto/cobranza.dto';
+import { RegistrarAccionDto, RegistrarPagoDto, UpdateCobranzaDto } from './dto/cobranza.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -47,5 +47,16 @@ export class CobranzaController {
     @CurrentUser('id') userId: string,
   ) {
     return this.svc.registrarAccion(id, dto, userId);
+  }
+
+  @Post(':id/pago')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'COBRANZA' as any)
+  @ApiOperation({ summary: 'Registrar pago de cobranza' })
+  registrarPago(
+    @Param('id') id: string,
+    @Body() dto: RegistrarPagoDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.svc.registrarPago(id, dto, userId);
   }
 }

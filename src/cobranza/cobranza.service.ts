@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegistrarAccionDto, UpdateCobranzaDto } from './dto/cobranza.dto';
+import { RegistrarAccionDto, RegistrarPagoDto, UpdateCobranzaDto } from './dto/cobranza.dto';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -69,6 +69,37 @@ export class CobranzaService {
 
     await this.audit.log({ accion: `ACCION_${dto.tipo}`, entidad: 'Cobranza', entidadId: id, usuarioId });
     return accion;
+  }
+
+  async registrarPago(id: string, dto: RegistrarPagoDto, usuarioId: string) {
+    const cobranza = await this.findOne(id);
+    if (!cobranza) throw new NotFoundException('Registro de cobranza no encontrado');
+
+    // Crear registro de Pago vinculado al crédito
+    const pago = await this.prisma.pago.create({
+      data: {
+        creditoId: cobranza.creditoId,
+        monto: dto.monto,
+        fechaPago: new Date(),
+        tipo: (dto.tipo as any) || 'MENSUALIDAD',
+        referencia: dto.referencia,
+      },
+    });
+
+    // Reducir monto adeudado
+    const nuevoMonto = Math.max(0, Number(cobranza.montoAdeudado) - dto.monto);
+    await this.prisma.cobranza.update({
+      where: { id },
+      data: {
+        montoAdeudado: nuevoMonto,
+        estatus: nuevoMonto === 0 ? 'PAGADO' : 'EN_GESTION',
+        ultimaAccion: `Pago registrado: $${dto.monto}`,
+        fechaUltAccion: new Date(),
+      },
+    });
+
+    await this.audit.log({ accion: 'REGISTRAR_PAGO', entidad: 'Cobranza', entidadId: id, usuarioId, datos: dto });
+    return pago;
   }
 
   async getKpis() {
