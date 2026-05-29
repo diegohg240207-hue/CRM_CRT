@@ -10,7 +10,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @ApiTags('prospectos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'EJECUTIVO_CRM' as any)
+@Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'EJECUTIVO_CRM' as any, 'CREDITO' as any)
 @Controller('prospectos')
 export class ProspectosController {
   constructor(private svc: ProspectosService) {}
