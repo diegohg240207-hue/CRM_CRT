@@ -23,7 +23,13 @@ export class ClientesService {
     if (sucursalId) where.sucursalId = sucursalId;
     if (estatus) where.estatus = estatus;
     if (riesgo) where.riesgo = riesgo;
-    if (q) where.nombre = { contains: q, mode: 'insensitive' };
+    if (q) {
+      where.OR = [
+        { nombre:   { contains: q, mode: 'insensitive' } },
+        { telefono: { contains: q, mode: 'insensitive' } },
+        { folio:    { contains: q, mode: 'insensitive' } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.cliente.findMany({
@@ -137,6 +143,24 @@ export class ClientesService {
 
     await this.audit.log({ accion: 'AUMENTAR_LINEA', entidad: 'Cliente', entidadId: id, usuarioId, datos: dto });
     return updated;
+  }
+
+  /** KPIs agregados de líneas de crédito para el módulo Líneas */
+  async getLineasKpis() {
+    const [lineasOtorgadas, agg, elegibles] = await Promise.all([
+      this.prisma.lineaCredito.count(),
+      this.prisma.lineaCredito.aggregate({
+        _sum: { lineaAprobada: true, lineaUsada: true, lineaDisponible: true },
+      }),
+      this.prisma.lineaCredito.count({ where: { elegibleAumento: true } }),
+    ]);
+    return {
+      lineasOtorgadas,
+      lineaAprobadaTotal:  Number(agg._sum.lineaAprobada  || 0),
+      lineaUsadaTotal:     Number(agg._sum.lineaUsada     || 0),
+      lineaDisponibleTotal:Number(agg._sum.lineaDisponible|| 0),
+      elegiblesAumento:    elegibles,
+    };
   }
 
   private calcularScoreInterno(scoreBuro: number): number {

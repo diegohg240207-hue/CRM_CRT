@@ -28,6 +28,13 @@ export class ClientesController {
     return this.svc.findAll({ sucursalId, estatus, riesgo, q, page: +page, limit: +limit });
   }
 
+  @Get('lineas/kpis')
+  @Roles('ADMINISTRADOR' as any, 'SUPERVISOR' as any, 'CREDITO' as any, 'EJECUTIVO_CRM' as any)
+  @ApiOperation({ summary: 'KPIs agregados de líneas de crédito' })
+  getLineasKpis() {
+    return this.svc.getLineasKpis();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
